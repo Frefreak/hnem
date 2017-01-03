@@ -20,7 +20,8 @@ data Log = Log {
     _option :: Options,
     _userId :: Maybe Scientific,
     _playList :: [Playlist],
-    _currentList :: [AlbumDetail]
+    _currentList :: [AlbumDetail],
+    _currentPlayingList :: [AlbumDetail]
 }
 
 makeLenses ''Log
@@ -56,7 +57,9 @@ data St = St {
     _steditloginselect :: Int, -- 0 -> account, 1 -> password, 2,3 -> confirm/cancel
     _stlogined :: Bool,
     _stloginfailed :: Bool,
-    _stcachefile :: FilePath
+    _stcachefile :: FilePath,
+    _stnextsongappended :: Bool,
+    _stcurrentSongNumber :: Int
 }
 
 makeLenses ''St

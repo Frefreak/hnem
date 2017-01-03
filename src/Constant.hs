@@ -56,7 +56,7 @@ queryMusicUrl :: String
 queryMusicUrl = "http://music.163.com/weapi/song/enhance/player/url?csrf_token="
 
 initialState :: Log
-initialState = Log defaults Nothing [] []
+initialState = Log defaults Nothing [] [] []
 
 initialSt :: St
 initialSt = St {
@@ -76,7 +76,9 @@ initialSt = St {
     _steditloginselect = 0,
     _stlogined = False,
     _stloginfailed = True,
-    _stcachefile = ""
+    _stcachefile = "",
+    _stnextsongappended = False,
+    _stcurrentSongNumber = -1
 }
 
 emptyEditPair :: (Editor String Text, Editor String Text)

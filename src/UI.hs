@@ -171,25 +171,35 @@ handlePlaylistDetailLayoutEvent st ev =
             case selected of
                 Just n -> do
                     let total = V.length $ st ^. stalbumDetail . listElementsL
-                    if n <= total - 1 then do -- add multiple songs
-                        r <- liftIO $ evalStateT (getMusicsUrl n (total - 1))
-                            (st ^. stlog)
-                        let urls = fst <$> r
-                            ids = snd <$> r
-                        tdir <- liftIO getTemporaryDirectory
-                        (fp, h) <- liftIO $ openTempFile tdir "mplayer.playlist"
-                        liftIO $ hPutStrLn h (intercalate "\n" urls) >> hFlush h
-                        let fns = Prelude.map takeFileName urls
-                            albummap = (\(a,b) -> (b, a)) <$> st^.stlog.currentList
-                            songs = Prelude.map
-                                (\i -> unpack . fromJust $ lookup i albummap) ids
-                        result <- exeMplayer (playMusicFile fp)
-                            (st & stisplaying .~ True
-                                & stfilenameMap .~ Prelude.zip fns songs
-                                & stflag .~ True)
-                        liftIO $ threadDelay 300000 >> removeFile fp
-                        return result
-                                        else continue st
+                    if n <= total - 1
+                      then do -- add a single song at a time
+                        uri <- liftIO $ evalStateT (getMusicUrl n _currentList) (st ^. stlog)
+                        exeMplayer (playMusic uri) $ st & stisplaying .~ True
+                                                        & stflag .~ True
+                                                        & stfilenameMap .~ [(takeFileName uri,
+                                                    unpack . fst $ (st^.stlog.currentList) !! n)]
+                                                        & stcurrentSongNumber .~ n
+                                                        & stnextsongappended .~ False
+                                                        & stlog . currentPlayingList .~
+                                                            st ^. stlog . currentList
+                          {- r <- liftIO $ evalStateT (getMusicsUrl n (total - 1)) -}
+                              {- (st ^. stlog) -}
+                          {- let urls = fst <$> r -}
+                              {- ids = snd <$> r -}
+                          {- tdir <- liftIO getTemporaryDirectory -}
+                          {- (fp, h) <- liftIO $ openTempFile tdir "mplayer.playlist" -}
+                          {- liftIO $ hPutStrLn h (intercalate "\n" urls) >> hFlush h -}
+                          {- let fns = Prelude.map takeFileName urls -}
+                              {- albummap = (\(a,b) -> (b, a)) <$> st^.stlog.currentList -}
+                              {- songs = Prelude.map -}
+                                  {- (\i -> unpack . fromJust $ lookup i albummap) ids -}
+                          {- result <- exeMplayer (playMusicFile fp) -}
+                              {- (st & stisplaying .~ True -}
+                                  {- & stfilenameMap .~ Prelude.zip fns songs -}
+                                  {- & stflag .~ True) -}
+                          {- liftIO $ threadDelay 300000 >> removeFile fp -}
+                          {- return result -}
+                      else continue st
                 Nothing -> continue st
         _ -> genericHandler st ev
 
@@ -283,13 +293,43 @@ updateTime :: St -> EventM n (Next St)
 updateTime st = case st ^. stmplayer of
     Nothing -> error "this should not happen!!!"
     Just mp -> do
-        tp <- liftIO (getTimePosition mp)
-        tl <- liftIO (getTimeLength mp)
-        case tp of
+        t <- liftIO $
+            ( \a b -> do
+                tp <- a
+                tl <- b
+                return (tp, tl) ) <$> getTimePosition mp <*> getTimeLength mp
+        case t of
             Nothing -> continue st
-            Just tp' -> case tl of
-                        Nothing -> continue st
-                        Just tl' -> continue $ st & sttimeline .~ (tp', tl')
+            Just (tp', tl') -> do
+                let flag | tp' / tl' > 0.9 = if st ^. stnextsongappended
+                                                then 0 -- do nothing
+                                                else 1 -- append song
+                         | st ^. stnextsongappended = 2 -- appended song playing
+                                                        -- clear it
+                         | otherwise = 0                -- do nothing
+                case flag of
+                    0 -> continue $ st & sttimeline .~ (tp', tl')
+                    1 -> do
+                        let n = st ^. stcurrentSongNumber
+                        if n < Prelude.length (st ^. stlog . currentList) - 1
+                          then do
+                            uri <- liftIO $ evalStateT
+                                (getMusicUrl (n+1) _currentPlayingList) (st ^. stlog)
+                            let newTuple = (takeFileName uri,
+                                    unpack . fst $ (st^.stlog.currentPlayingList) !! (n+1))
+                            exeMplayer (appendMusic uri) $ st & stisplaying .~ True
+                                                & stflag .~ True
+                                                & stfilenameMap .~
+                                                    [newTuple, Prelude.head $
+                                                        st^.stfilenameMap]
+                                                & stcurrentSongNumber .~ (n + 1)
+                                                & sttimeline .~ (tp', tl')
+                                                & stnextsongappended .~ True
+                          else continue $ st & sttimeline .~ (tp', tl')
+                                            & stnextsongappended .~ True
+                    2 -> continue $ st & sttimeline .~ (tp', tl')
+                                    & stnextsongappended .~ False
+
 
 updateSong :: St -> EventM n (Next St)
 updateSong st = case st ^. stmplayer of

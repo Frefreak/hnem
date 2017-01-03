@@ -73,10 +73,10 @@ getPlaylistDetail n = do
                     "limit" .= Number 1000,
                     "n" .= Number 1000]
 
-getMusicUrl :: Int -> ST.StateT Log IO String
-getMusicUrl n = do
+getMusicUrl :: Int -> (Log -> [AlbumDetail]) -> ST.StateT Log IO String
+getMusicUrl n func = do
     opt <- ST.gets _option
-    ad <- ST.gets _currentList
+    ad <- ST.gets func
     let pick = snd $ ad !! n
     r <- lift $ postToServer queryMusicUrl opt (v pick)
     return . unpack $ r ^. responseBody . key "data" . nth 0 . key "url" . _String where
@@ -84,10 +84,10 @@ getMusicUrl n = do
                         "br" .= brH]
 
 -- the caller garenteens start <= total
-getMusicsUrl :: Int -> Int -> ST.StateT Log IO [(String, Scientific)]
-getMusicsUrl start total = do
+getMusicsUrl :: Int -> Int -> (Log -> [AlbumDetail]) -> ST.StateT Log IO [(String, Scientific)]
+getMusicsUrl start total func = do
     opt <- ST.gets _option
-    ad <- ST.gets _currentList
+    ad <- ST.gets func
     let picks = map (\n -> snd $ ad !! n) [start..total]
     r <- lift $ postToServer queryMusicUrl opt (v picks)
     return $ r ^.. responseBody . key "data"
@@ -96,7 +96,6 @@ getMusicsUrl start total = do
             ) where
         v picks = object ["ids" .= Array (fromList (Number <$> picks)),
                         "br" .= brH]
-
 
 downloadMusic :: String -> ST.StateT Log IO ()
 downloadMusic url = do
