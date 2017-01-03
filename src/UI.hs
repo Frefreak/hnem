@@ -30,13 +30,13 @@ import Operations
 import Types
 import Player
 
-padLeft' :: Int -> Widget -> Widget
+padLeft' :: Int -> Widget n -> Widget n
 padLeft' = padLeft . Pad
 
-padTop' :: Int -> Widget -> Widget
+padTop' :: Int -> Widget n -> Widget n
 padTop' = padTop . Pad
 
-playerUI :: St -> Widget
+playerUI :: St -> Widget n
 playerUI st =
     let b = st ^. stflag
     in if b then playerUI' st else emptyWidget
@@ -47,7 +47,7 @@ doubleToTime d =
         s = truncate (d - realToFrac (m * 60)) :: Int
     in printf "%02d" m <> ":" <> printf "%02d" s
 
-playerUI' :: St -> Widget
+playerUI' :: St -> Widget n
 playerUI' st =
     let (a, b) = st ^. sttimeline
         w1 =
@@ -65,42 +65,43 @@ playerUI' st =
     in padLeft' 6 $ (str " " <=> (w1 <+> str " " <+> w2) <=> str " ") <=>
         padLeft' 5 (filename <+> str " " <+> pa)
 
-renderMainLayout :: St -> [Widget]
+renderMainLayout :: St -> [Widget Text]
 renderMainLayout st =
     let ls = st ^. stmain
-    in [padTop' 2 (vLimit 18 $ vBox [renderList ls rend]) <=>
+    in [padTop' 2 (vLimit 18 $ vBox [renderList rend True ls]) <=>
         playerUI st] where
-        rend b t = if b  then padLeft' 10 $ withAttr listSelectedAttr $ txt t
-                            else padLeft' 9 $ withAttr listAttr $ txt t
+        rend b t = if b
+                     then padLeft' 10 $ withAttr listSelectedAttr $ txt t
+                     else padLeft' 9 $ withAttr listAttr $ txt t
 
-renderPlaylistLayout :: St -> [Widget]
+renderPlaylistLayout :: St -> [Widget Text]
 renderPlaylistLayout st =
     let ls'' = fst <$> (st ^. stplaylist)
         ls' = ls'' ^. listElementsL
         ls = V.zipWith (\a b -> pack (show b) <> ". " <> a)
                 ls' (fromList [0..V.length ls' - 1] :: Vector Int)
     in [vBox [padTop' 2 $ vLimit 18 $ vBox
-        [renderList (ls'' & listElementsL .~ ls) rend], playerUI st]] where
+        [renderList rend True $ ls'' & listElementsL .~ ls], playerUI st]] where
         rend b t = if b  then padLeft' 10 $ withAttr listSelectedAttr $ txt t
                             else padLeft' 9 $ withAttr listAttr $ txt t
 
-renderPlaylistDetailLayout :: St -> [Widget]
+renderPlaylistDetailLayout :: St -> [Widget Text]
 renderPlaylistDetailLayout st =
     let ls'' = fst <$> (st ^. stalbumDetail)
         ls' = ls'' ^. listElementsL
         ls = V.zipWith (\a b -> pack (show b) <> ". " <> a)
                 ls' (fromList [0..V.length ls' - 1] :: Vector Int)
     in [vBox [padTop' 2 $ vLimit 18 $ vBox
-        [renderList (ls'' & listElementsL .~ ls) rend], playerUI st]] where
+        [renderList rend True $ ls'' & listElementsL .~ ls], playerUI st]] where
         rend b t = if b  then padLeft' 10 $ withAttr listSelectedAttr $ txt t
                             else padLeft' 9 $ withAttr listAttr $ txt t
 
-renderLoginLayout :: St -> [Widget]
+renderLoginLayout :: St -> [Widget Text]
 renderLoginLayout st = [padAll 5 w] where
     w = waccount <=> str " " <=> str " " <=> wpassword <=> str " " <=>
         padTop' 1 (padLeft' 8 $ wconfirm <+> str "        " <+> wcancel)
         <=> padTop' 1wfailmessage
-    waccount = vLimit 1 $ wastr <+> renderEditor (fst $ st ^. steditlogin)
+    waccount = vLimit 1 $ wastr <+> renderEditor True (fst $ st ^. steditlogin)
     wpassword = vLimit 1 $ wapwd <+> renderwpwd
     renderwpwd = str $ Prelude.replicate (Prelude.length . Prelude.head
                     . getEditContents . snd $ st ^. steditlogin) '*'
@@ -115,12 +116,12 @@ renderLoginLayout st = [padAll 5 w] where
     wfailmessage = if st ^. stloginfailed then str "" else
         withAttr pausedAttr (str "login failed, pls try again.")
 
-monadSet :: (HandleEvent a) => St -> Lens' St a -> Event -> EventM (Next St)
+monadSet :: (Ord n, Show n) => St -> Lens' St (List n e) -> Event -> EventM n (Next St)
 monadSet st len ev = do
-    new <- handleEvent ev (st ^. len)
+    new <- handleListEvent ev (st ^. len)
     continue $ st & len .~ new
 
-handleMainLayoutEvent :: St -> CustomEvent -> EventM (Next St)
+handleMainLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
 handleMainLayoutEvent st ev =
     case ev of
         Ev (EvKey (KChar 'j') []) -> monadSet st stmain (EvKey KDown [])
@@ -139,7 +140,7 @@ handleMainLayoutEvent st ev =
                 _ -> continue st
         _ -> genericHandler st ev
 
-handlePlaylistLayoutEvent :: St -> CustomEvent -> EventM (Next St)
+handlePlaylistLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
 handlePlaylistLayoutEvent st ev =
     case ev of
         Ev (EvKey (KChar 'j') []) -> monadSet st stplaylist (EvKey KDown [])
@@ -157,7 +158,7 @@ handlePlaylistLayoutEvent st ev =
                 Nothing -> continue st
         _ -> genericHandler st ev
 
-handlePlaylistDetailLayoutEvent :: St -> CustomEvent -> EventM (Next St)
+handlePlaylistDetailLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
 handlePlaylistDetailLayoutEvent st ev =
     case ev of
         Ev (EvKey (KChar 'j') []) -> monadSet st stalbumDetail (EvKey KDown [])
@@ -192,7 +193,7 @@ handlePlaylistDetailLayoutEvent st ev =
                 Nothing -> continue st
         _ -> genericHandler st ev
 
-handleLoginLayoutEvent :: St -> CustomEvent -> EventM (Next St)
+handleLoginLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
 handleLoginLayoutEvent st ev = do
     let (a, b) = st ^. steditlogin
     case ev of
@@ -212,15 +213,15 @@ handleLoginLayoutEvent st ev = do
         Ev event ->
             case st ^. steditloginselect of
                 0 -> do
-                    newa <- handleEvent event a
+                    newa <- handleEditorEvent event a
                     continue $ st & steditlogin .~ (newa, b)
                 1 -> do
-                    newb <- handleEvent event b
+                    newb <- handleEditorEvent event b
                     continue $ st & steditlogin .~ (a, newb)
                 _ -> continue st
         _ -> continue st
 
-genericHandler :: St -> CustomEvent -> EventM (Next St)
+genericHandler :: St -> CustomEvent -> EventM Text (Next St)
 genericHandler st ev =
     case ev of
         Ev (EvKey (KChar 'q') []) -> halt st
@@ -249,7 +250,7 @@ genericHandler st ev =
                 else continue st
         _ -> continue st
 
-performLogin :: St -> EventM (Next St)
+performLogin :: St -> EventM Text (Next St)
 performLogin st = do
     let account = Prelude.head $ getEditContents (fst $ st ^. steditlogin)
         password = Prelude.head $ getEditContents (snd $ st ^. steditlogin)
@@ -270,15 +271,15 @@ writeCache st = withFile (st ^. stcachefile) WriteMode $ \h -> do
 
 
 
-tryPhoneLogin :: String -> String -> St -> EventM (St, Bool)
+tryPhoneLogin :: String -> String -> St -> EventM n (St, Bool)
 tryPhoneLogin phone pwd st = do
     (r, l) <- liftIO $ runStateT (loginPhone phone pwd) (st ^. stlog)
     if r then return (st&stlog .~ l, True) else return (st, False)
 
-tryLogin :: String -> String -> St -> EventM (St, Bool)
+tryLogin :: String -> String -> St -> EventM n (St, Bool)
 tryLogin account pwd st = return (st, False)
 
-updateTime :: St -> EventM (Next St)
+updateTime :: St -> EventM n (Next St)
 updateTime st = case st ^. stmplayer of
     Nothing -> error "this should not happen!!!"
     Just mp -> do
@@ -290,7 +291,7 @@ updateTime st = case st ^. stmplayer of
                         Nothing -> continue st
                         Just tl' -> continue $ st & sttimeline .~ (tp', tl')
 
-updateSong :: St -> EventM (Next St)
+updateSong :: St -> EventM n (Next St)
 updateSong st = case st ^. stmplayer of
     Nothing -> error "this should not happend!!!!"
     Just mp -> do
@@ -299,14 +300,14 @@ updateSong st = case st ^. stmplayer of
             Nothing -> continue st
             Just fn' -> continue $ st & stcurrentSong .~ lookup fn' (st^.stfilenameMap)
 
-getMplayerProperty :: (MVar MpObject -> IO a) -> St -> EventM a
+getMplayerProperty :: (MVar MpObject -> IO a) -> St -> EventM n a
 getMplayerProperty action st = do
     let mp = st ^. stmplayer
     case mp of
         Just mp' -> liftIO $ action mp'
         Nothing -> error "invalid calling"
 
-exeMplayer :: (MVar MpObject -> IO ()) -> St -> EventM (Next St)
+exeMplayer :: (MVar MpObject -> IO ()) -> St -> EventM n (Next St)
 exeMplayer action st = do
     let mp = st ^. stmplayer
     case mp of
@@ -314,7 +315,7 @@ exeMplayer action st = do
         Nothing -> return ()
     continue st
 
-uiAppDraw :: St -> [Widget]
+uiAppDraw :: St -> [Widget Text]
 uiAppDraw st =
     case st ^. stcurrentLayout of
         MainLayout -> renderMainLayout st
@@ -322,7 +323,7 @@ uiAppDraw st =
         PlayListDetailLayout -> renderPlaylistDetailLayout st
         LoginLayout -> renderLoginLayout st
 
-uiAppHandleEvent :: St -> CustomEvent -> EventM (Next St)
+uiAppHandleEvent :: St -> CustomEvent -> EventM Text (Next St)
 uiAppHandleEvent st ev =
     case st ^. stcurrentLayout of
         MainLayout -> handleMainLayoutEvent st ev
@@ -330,7 +331,7 @@ uiAppHandleEvent st ev =
         PlayListDetailLayout -> handlePlaylistDetailLayoutEvent st ev
         LoginLayout -> handleLoginLayoutEvent st ev
 
-theApp :: App St CustomEvent
+theApp :: App St CustomEvent Text
 theApp = App {
     appDraw = uiAppDraw,
     appChooseCursor = neverShowCursor,

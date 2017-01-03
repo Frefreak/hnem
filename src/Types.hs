@@ -42,9 +42,9 @@ makeLenses ''MpObject
 data St = St {
     _stlog :: Log,
     _stcurrentLayout :: Layout,
-    _stmain :: List Text,
-    _stplaylist :: List Playlist,
-    _stalbumDetail :: List AlbumDetail,
+    _stmain :: List Text Text,
+    _stplaylist :: List Text Playlist,
+    _stalbumDetail :: List Text AlbumDetail,
     _stmplayer :: Maybe (MVar MpObject),
     _stisplaying :: Bool,
     _stupdaterId :: [ThreadId],
@@ -52,7 +52,7 @@ data St = St {
     _stfilenameMap :: [(String, String)],
     _stcurrentSong :: Maybe String,
     _stflag :: Bool, -- indicate if starting to play first song
-    _steditlogin :: (Editor, Editor),
+    _steditlogin :: (Editor String Text, Editor String Text),
     _steditloginselect :: Int, -- 0 -> account, 1 -> password, 2,3 -> confirm/cancel
     _stlogined :: Bool,
     _stloginfailed :: Bool,

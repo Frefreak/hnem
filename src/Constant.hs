@@ -8,7 +8,7 @@ import Network.HTTP.Client.TLS
 import Network.HTTP.Client
 import Network.Connection
 import Data.Default (def)
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Brick.Widgets.Core
 import Brick.Widgets.List
 import Brick.Widgets.Edit
@@ -79,7 +79,7 @@ initialSt = St {
     _stcachefile = ""
 }
 
-emptyEditPair :: (Editor, Editor)
+emptyEditPair :: (Editor String Text, Editor String Text)
 emptyEditPair = (editor "account" (str . concat) Nothing "",
             editor "password" (str . concat) Nothing "")
 
