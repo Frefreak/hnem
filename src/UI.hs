@@ -311,7 +311,7 @@ updateTime st = case st ^. stmplayer of
                     0 -> continue $ st & sttimeline .~ (tp', tl')
                     1 -> do
                         let n = st ^. stcurrentSongNumber
-                        if n < Prelude.length (st ^. stlog . currentList) - 1
+                        if n < Prelude.length (st ^. stlog . currentPlayingList) - 1
                           then do
                             uri <- liftIO $ evalStateT
                                 (getMusicUrl (n+1) _currentPlayingList) (st ^. stlog)
