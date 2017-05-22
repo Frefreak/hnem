@@ -68,7 +68,7 @@ playerUI' st =
 renderMainLayout :: St -> [Widget Text]
 renderMainLayout st =
     let ls = st ^. stmain
-    in [padTop' 2 (vLimit 18 $ vBox [renderList rend True ls]) <=>
+    in [padTop' 1 (vLimit 17 $ vBox [renderList rend True ls]) <=>
         playerUI st] where
         rend b t = if b
                      then padLeft' 10 $ withAttr listSelectedAttr $ txt t
@@ -80,7 +80,7 @@ renderPlaylistLayout st =
         ls' = ls'' ^. listElementsL
         ls = V.zipWith (\a b -> pack (show b) <> ". " <> a)
                 ls' (fromList [0..V.length ls' - 1] :: Vector Int)
-    in [vBox [padTop' 2 $ vLimit 18 $ vBox
+    in [vBox [padTop' 1 $ vLimit 17 $ vBox
         [renderList rend True $ ls'' & listElementsL .~ ls], playerUI st]] where
         rend b t = if b  then padLeft' 10 $ withAttr listSelectedAttr $ txt t
                             else padLeft' 9 $ withAttr listAttr $ txt t
@@ -91,7 +91,7 @@ renderPlaylistDetailLayout st =
         ls' = ls'' ^. listElementsL
         ls = V.zipWith (\a b -> pack (show b) <> ". " <> a)
                 ls' (fromList [0..V.length ls' - 1] :: Vector Int)
-    in [vBox [padTop' 2 $ vLimit 18 $ vBox
+    in [vBox [padTop' 1 $ vLimit 17 $ vBox
         [renderList rend True $ ls'' & listElementsL .~ ls], playerUI st]] where
         rend b t = if b  then padLeft' 10 $ withAttr listSelectedAttr $ txt t
                             else padLeft' 9 $ withAttr listAttr $ txt t
