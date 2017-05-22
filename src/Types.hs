@@ -64,5 +64,5 @@ data St = St {
 
 makeLenses ''St
 
-data CustomEvent = Ev Event | UpdateTimeline | UpdateSong
+data CustomEvent = UpdateTimeline | UpdateSong
 

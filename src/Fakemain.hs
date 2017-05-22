@@ -2,6 +2,7 @@
 module Fakemain where
 
 import Brick.Main
+import Brick.BChan
 import Control.Concurrent
 import Control.Monad
 import Graphics.Vty
@@ -21,11 +22,11 @@ import UI
 import Types
 import Constant
 
-updateTimeLine :: IO (ThreadId, Chan CustomEvent)
+updateTimeLine :: IO (ThreadId, BChan CustomEvent)
 updateTimeLine = do
-    chan <- newChan
+    chan <- newBChan 100
     tid <- forkIO $ forever $ do
-        writeChan chan UpdateTimeline
+        writeBChan chan UpdateTimeline
         threadDelay 500000
     return (tid, chan)
 
@@ -34,7 +35,7 @@ main' = do
     mp <- startMplayer
     (tid1, chan) <- updateTimeLine
     tid2 <- forkIO $ forever $ do
-        writeChan chan UpdateSong
+        writeBChan chan UpdateSong
         threadDelay 1000000
     opt <- defOpt
     cache <- getUserCacheFile "hnme" "cache"
@@ -52,7 +53,7 @@ main' = do
                                 & stlog . userId .~ uid
                                 & stlogined .~ True
                     else initialSt & stlog . option .~  opt
-    void $ customMain (mkVty def) chan theApp st
+    void $ customMain (mkVty defaultConfig) (Just chan) theApp st
         {    _stmplayer = Just mp,
             _stupdaterId = [tid1, tid2],
             _stcachefile = cache

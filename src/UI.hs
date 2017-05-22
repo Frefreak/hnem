@@ -121,14 +121,14 @@ monadSet st len ev = do
     new <- handleListEvent ev (st ^. len)
     continue $ st & len .~ new
 
-handleMainLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
+handleMainLayoutEvent :: St -> BrickEvent Text CustomEvent -> EventM Text (Next St)
 handleMainLayoutEvent st ev =
     case ev of
-        Ev (EvKey (KChar 'j') []) -> monadSet st stmain (EvKey KDown [])
-        Ev (EvKey (KChar 'k') []) -> monadSet st stmain (EvKey KUp [])
-        Ev (EvKey (KChar 'd') [MCtrl]) -> monadSet st stmain (EvKey KPageDown [])
-        Ev (EvKey (KChar 'u') [MCtrl]) -> monadSet st stmain (EvKey KPageUp [])
-        Ev (EvKey (KChar 'l') []) -> -- switch from MainLayout to PlayListLayout
+        VtyEvent (EvKey (KChar 'j') []) -> monadSet st stmain (EvKey KDown [])
+        VtyEvent (EvKey (KChar 'k') []) -> monadSet st stmain (EvKey KUp [])
+        VtyEvent (EvKey (KChar 'd') [MCtrl]) -> monadSet st stmain (EvKey KPageDown [])
+        VtyEvent (EvKey (KChar 'u') [MCtrl]) -> monadSet st stmain (EvKey KPageUp [])
+        VtyEvent (EvKey (KChar 'l') []) -> -- switch from MainLayout to PlayListLayout
             case st ^. stmain . listSelectedL of
                 Just 0 -> continue $ st & stcurrentLayout .~ LoginLayout
                 Just 1 ->
@@ -140,15 +140,15 @@ handleMainLayoutEvent st ev =
                 _ -> continue st
         _ -> genericHandler st ev
 
-handlePlaylistLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
+handlePlaylistLayoutEvent :: St -> BrickEvent Text CustomEvent -> EventM Text (Next St)
 handlePlaylistLayoutEvent st ev =
     case ev of
-        Ev (EvKey (KChar 'j') []) -> monadSet st stplaylist (EvKey KDown [])
-        Ev (EvKey (KChar 'k') []) -> monadSet st stplaylist (EvKey KUp [])
-        Ev (EvKey (KChar 'd') [MCtrl]) -> monadSet st stplaylist (EvKey KPageDown [])
-        Ev (EvKey (KChar 'u') [MCtrl]) -> monadSet st stplaylist (EvKey KPageUp [])
-        Ev (EvKey (KChar 'h') []) -> continue $ st & stcurrentLayout .~ MainLayout
-        Ev (EvKey (KChar 'l') []) -> do -- switch from PlayListLayout to PlayListDetailLayout
+        VtyEvent (EvKey (KChar 'j') []) -> monadSet st stplaylist (EvKey KDown [])
+        VtyEvent (EvKey (KChar 'k') []) -> monadSet st stplaylist (EvKey KUp [])
+        VtyEvent (EvKey (KChar 'd') [MCtrl]) -> monadSet st stplaylist (EvKey KPageDown [])
+        VtyEvent (EvKey (KChar 'u') [MCtrl]) -> monadSet st stplaylist (EvKey KPageUp [])
+        VtyEvent (EvKey (KChar 'h') []) -> continue $ st & stcurrentLayout .~ MainLayout
+        VtyEvent (EvKey (KChar 'l') []) -> do -- switch from PlayListLayout to PlayListDetailLayout
             let selected = st ^. stplaylist . listSelectedL
             case selected of
                 Just n -> do
@@ -158,15 +158,15 @@ handlePlaylistLayoutEvent st ev =
                 Nothing -> continue st
         _ -> genericHandler st ev
 
-handlePlaylistDetailLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
+handlePlaylistDetailLayoutEvent :: St -> BrickEvent Text CustomEvent -> EventM Text (Next St)
 handlePlaylistDetailLayoutEvent st ev =
     case ev of
-        Ev (EvKey (KChar 'j') []) -> monadSet st stalbumDetail (EvKey KDown [])
-        Ev (EvKey (KChar 'k') []) -> monadSet st stalbumDetail (EvKey KUp [])
-        Ev (EvKey (KChar 'd') [MCtrl]) -> monadSet st stalbumDetail (EvKey KPageDown [])
-        Ev (EvKey (KChar 'u') [MCtrl]) -> monadSet st stalbumDetail (EvKey KPageUp [])
-        Ev (EvKey (KChar 'h') []) -> continue $ st & stcurrentLayout .~ PlayListLayout
-        Ev (EvKey (KChar 'l') []) -> do -- play music
+        VtyEvent (EvKey (KChar 'j') []) -> monadSet st stalbumDetail (EvKey KDown [])
+        VtyEvent (EvKey (KChar 'k') []) -> monadSet st stalbumDetail (EvKey KUp [])
+        VtyEvent (EvKey (KChar 'd') [MCtrl]) -> monadSet st stalbumDetail (EvKey KPageDown [])
+        VtyEvent (EvKey (KChar 'u') [MCtrl]) -> monadSet st stalbumDetail (EvKey KPageUp [])
+        VtyEvent (EvKey (KChar 'h') []) -> continue $ st & stcurrentLayout .~ PlayListLayout
+        VtyEvent (EvKey (KChar 'l') []) -> do -- play music
             let selected = st ^. stalbumDetail . listSelectedL
             case selected of
                 Just n -> do
@@ -203,24 +203,24 @@ handlePlaylistDetailLayoutEvent st ev =
                 Nothing -> continue st
         _ -> genericHandler st ev
 
-handleLoginLayoutEvent :: St -> CustomEvent -> EventM Text (Next St)
+handleLoginLayoutEvent :: St -> BrickEvent Text CustomEvent -> EventM Text (Next St)
 handleLoginLayoutEvent st ev = do
     let (a, b) = st ^. steditlogin
     case ev of
-        Ev (EvKey KEsc []) -> continue $ st & stcurrentLayout .~ MainLayout
+        VtyEvent (EvKey KEsc []) -> continue $ st & stcurrentLayout .~ MainLayout
                         & stloginfailed .~ True & steditlogin .~ emptyEditPair
-        Ev (EvKey (KChar '\t') []) -> continue $
+        VtyEvent (EvKey (KChar '\t') []) -> continue $
                             st & steditloginselect %~ (\i -> (i + 1) `rem` 4)
-        Ev (EvKey KBackTab []) -> continue $
+        VtyEvent (EvKey KBackTab []) -> continue $
                             st & steditloginselect %~ (\i -> (i - 1) `mod` 4)
-        Ev (EvKey KEnter []) ->
+        VtyEvent (EvKey KEnter []) ->
             case st ^. steditloginselect of
                 0 -> continue $ st & steditloginselect .~ 1
                 1 -> performLogin st
                 2 -> performLogin st
                 _ -> continue $ st & stcurrentLayout .~ MainLayout
                         & stloginfailed .~ True & steditlogin .~ emptyEditPair
-        Ev event ->
+        VtyEvent event ->
             case st ^. steditloginselect of
                 0 -> do
                     newa <- handleEditorEvent event a
@@ -231,31 +231,31 @@ handleLoginLayoutEvent st ev = do
                 _ -> continue st
         _ -> continue st
 
-genericHandler :: St -> CustomEvent -> EventM Text (Next St)
+genericHandler :: St -> BrickEvent Text CustomEvent -> EventM Text (Next St)
 genericHandler st ev =
     case ev of
-        Ev (EvKey (KChar 'q') []) -> halt st
-        Ev (EvKey KEsc []) -> halt st
-        Ev (EvKey KRight []) ->
+        VtyEvent (EvKey (KChar 'q') []) -> halt st
+        VtyEvent (EvKey KEsc []) -> halt st
+        VtyEvent (EvKey KRight []) ->
                if st ^. stisplaying then exeMplayer (seekRelative 15) st
                    else continue st
-        Ev (EvKey KLeft []) ->
+        VtyEvent (EvKey KLeft []) ->
                if st ^. stisplaying then exeMplayer (seekRelative (-15)) st
                    else continue st
-        Ev (EvKey KUp []) ->
+        VtyEvent (EvKey KUp []) ->
                if st ^. stisplaying then exeMplayer (addVolume 1) st
                    else continue st
-        Ev (EvKey KDown []) ->
+        VtyEvent (EvKey KDown []) ->
             if st ^. stisplaying then exeMplayer (addVolume (-1)) st
                 else continue st
-        Ev (EvKey (KChar 'p') []) ->
+        VtyEvent (EvKey (KChar 'p') []) ->
             if st ^. stisplaying then exeMplayer pauseMplayer
                 (st & stisplaying .~ False)
                 else exeMplayer pauseMplayer (st & stisplaying .~ True)
-        UpdateTimeline -> --carefully update time line infomation
+        AppEvent UpdateTimeline -> --carefully update time line infomation
             if st ^. stisplaying then updateTime st
                 else continue st
-        UpdateSong ->
+        AppEvent UpdateSong ->
             if st ^. stisplaying then updateSong st
                 else continue st
         _ -> continue st
@@ -363,7 +363,7 @@ uiAppDraw st =
         PlayListDetailLayout -> renderPlaylistDetailLayout st
         LoginLayout -> renderLoginLayout st
 
-uiAppHandleEvent :: St -> CustomEvent -> EventM Text (Next St)
+uiAppHandleEvent :: St -> BrickEvent Text CustomEvent -> EventM Text (Next St)
 uiAppHandleEvent st ev =
     case st ^. stcurrentLayout of
         MainLayout -> handleMainLayoutEvent st ev
@@ -377,8 +377,7 @@ theApp = App {
     appChooseCursor = neverShowCursor,
     appHandleEvent = uiAppHandleEvent,
     appStartEvent = return,
-    appAttrMap = const $ attrMap defAttr customAttrMap,
-    appLiftVtyEvent = Ev
+    appAttrMap = const $ attrMap defAttr customAttrMap
 }
 
 progressBarAttr :: AttrName

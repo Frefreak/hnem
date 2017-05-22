@@ -41,10 +41,10 @@ commentsUrl :: String
 commentsUrl = "http://music.163.com/weapi/v1/resource/comments/R_SO_4_30953009/?csrf_token="
 
 loginUrl :: String
-loginUrl = "https://music.163.com/weapi/login/"
+loginUrl = "https://music.163.com/weapi/login"
 
 loginPhoneUrl :: String
-loginPhoneUrl = "https://music.163.com/weapi/login/cellphone/"
+loginPhoneUrl = "https://music.163.com/weapi/login/cellphone"
 
 userSongListUrl :: String
 userSongListUrl = "http://music.163.com/weapi/user/playlist?csrf_token="
