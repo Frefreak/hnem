@@ -38,8 +38,8 @@ main' = do
         writeBChan chan UpdateSong
         threadDelay 1000000
     opt <- defOpt
-    cache <- getUserCacheFile "hnme" "cache"
-    cacheDir <- getUserCacheDir "hnme"
+    cache <- getUserCacheFile "hnem" "cache"
+    cacheDir <- getUserCacheDir "hnem"
     db <- doesDirectoryExist cacheDir
     b <- fileExist cache
     unless db $ createDirectory cacheDir

@@ -287,7 +287,9 @@ tryPhoneLogin phone pwd st = do
     if r then return (st&stlog .~ l, True) else return (st, False)
 
 tryLogin :: String -> String -> St -> EventM n (St, Bool)
-tryLogin account pwd st = return (st, False)
+tryLogin account pwd st = do
+    (r, l) <- liftIO $ runStateT (login account pwd) (st ^. stlog)
+    if r then return (st&stlog .~ l, True) else return (st, False)
 
 updateTime :: St -> EventM n (Next St)
 updateTime st = case st ^. stmplayer of
